@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>课程管理系统</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #2196F3; color: white; }
+        input { margin: 5px; padding: 5px; }
+        button { background-color: #2196F3; color: white; border: none; padding: 8px 16px; cursor: pointer; margin: 2px; }
+        button.delete { background-color: #f44336; }
+        button.edit { background-color: #4CAF50; }
+        .form { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; }
+        .logout { background-color: #999; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; }
+        .logout:hover { background-color: #777; }
+        .back { background-color: #607D8B; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px; margin-right: 6px; }
+        .back:hover { background-color: #455A64; }
+        .search { display: flex; gap: 8px; align-items: center; margin-top: 20px; }
+        .search input { flex: 1; margin: 0; }
+        button.reset { background-color: #999; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>课程管理系统</h1>
+    <div>
+        <button class="back" onclick="history.back()">返回上一页</button>
+        <button class="logout" onclick="logout()">退出登录</button>
+    </div>
+</div>
+
+<div class="form">
+    <h3>添加课程</h3>
+    <input id="name" placeholder="课程名">
+    <input id="teacher" placeholder="老师">
+    <input id="credit" type="number" placeholder="学分">
+    <button onclick="addCourse()">添加</button>
+</div>
+
+<div class="search">
+    <input id="keyword" placeholder="按课程名或老师搜索" onkeydown="if(event.key==='Enter') loadCourses()">
+    <button onclick="loadCourses()">搜索</button>
+    <button class="reset" onclick="resetSearch()">重置</button>
+</div>
+
+<table>
+    <thead>
+    <tr><th>ID</th><th>课程名</th><th>老师</th><th>学分</th><th>操作</th></tr>
+    </thead>
+    <tbody id="courseList"></tbody>
+</table>
+
+<script>
+    // 查询课程；有关键字时按课程名或老师模糊搜索
+    function loadCourses() {
+        const keyword = document.getElementById('keyword').value.trim();
+        const url = keyword ? '/courses?keyword=' + encodeURIComponent(keyword) : '/courses';
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('courseList');
+                list.innerHTML = '';
+                if (data.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">没有找到匹配的课程</td></tr>';
+                    return;
+                }
+                data.forEach(c => {
+                    list.innerHTML += `
+                            <tr>
+                                <td>${c.id}</td>
+                                <td>${c.name}</td>
+                                <td>${c.teacher}</td>
+                                <td>${c.credit}</td>
+                                <td>
+                                    <button class="edit" onclick="editCourse(${c.id})">修改</button>
+                                    <button class="delete" onclick="deleteCourse(${c.id})">删除</button>
+                                </td>
+                            </tr>
+                        `;
+                });
+            });
+    }
+
+    // 清空搜索条件，恢复全部数据
+    function resetSearch() {
+        document.getElementById('keyword').value = '';
+        loadCourses();
+    }
+
+    function addCourse() {
+        const name = document.getElementById('name').value;
+        const teacher = document.getElementById('teacher').value;
+        const credit = document.getElementById('credit').value;
+        fetch('/courses', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, teacher, credit: parseInt(credit)})
+        }).then(() => {
+            loadCourses();
+            document.getElementById('name').value = '';
+            document.getElementById('teacher').value = '';
+            document.getElementById('credit').value = '';
+        });
+    }
+
+    function deleteCourse(id) {
+        if (confirm('确定删除吗？')) {
+            fetch('/courses/' + id, {method: 'DELETE'}).then(() => loadCourses());
+        }
+    }
+
+    function editCourse(id) {
+        const name = prompt('新课程名：');
+        const teacher = prompt('新老师：');
+        const credit = prompt('新学分：');
+        if (name && teacher && credit) {
+            fetch('/courses/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, teacher, credit: parseInt(credit)})
+            }).then(() => loadCourses());
+        }
+    }
+
+    function logout() {
+        fetch('/logout', { method: 'POST' })
+            .then(() => { window.location.href = '/login.html'; });
+    }
+
+    loadCourses();
+</script>
+<footer style="text-align:center;color:#999;margin-top:40px;font-size:12px;">cly202405315310</footer>
+</body>
+</html>
